@@ -1,4 +1,5 @@
 import { ChatClient } from '../../Core/Chat/ChatClient';
+import { ModelClient, RemoteModel } from '../../Core/Chat/ModelClient';
 import { Configuration } from '../../Core/Configuration/Configuration';
 import { Logger } from '../../Core/Logging/Logger';
 import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
@@ -27,6 +28,10 @@ interface SseUsage {
 	prompt_tokens_details?: { cached_tokens?: number } | null;
 }
 
+interface ModelsListResponse {
+	data?: Array<{ id?: string }>;
+}
+
 interface SseChunk {
 	choices?: Array<{
 		delta?: {
@@ -45,11 +50,45 @@ interface SseChunk {
 const SSE_DATA_PREFIX = 'data:';
 const SSE_DONE = '[DONE]';
 
-export class DeepSeekHttpClient implements ChatClient {
+export class DeepSeekHttpClient implements ChatClient, ModelClient {
 	constructor(
 		private readonly configuration: Configuration,
 		private readonly logger: Logger,
 	) {}
+
+	async listModels(
+		signal: AbortSignal,
+	): ReturnOrThrowError<
+		Promise<readonly RemoteModel[]>,
+		ConfigurationError | ApiError | DOMException
+	> {
+		const apiKey = await this.configuration.getApiKey();
+		if (!apiKey) {
+			throw new ConfigurationError(
+				'No DeepSeek API key configured. Run the "DeepSeek: Configure API Key" command.',
+			);
+		}
+
+		const url = `${this.configuration.getBaseUrl()}/models`;
+		this.logger.debug(`GET ${url}`);
+
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+			},
+			signal,
+		});
+
+		if (!response.ok) {
+			throw await this.toApiError(response);
+		}
+
+		const payload = (await response.json()) as ModelsListResponse;
+		return (payload.data ?? [])
+			.filter((model): model is { id: string } => typeof model.id === 'string' && model.id.length > 0)
+			.map((model) => ({ id: model.id }));
+	}
 
 	async *streamChat(
 		request: ChatRequest,

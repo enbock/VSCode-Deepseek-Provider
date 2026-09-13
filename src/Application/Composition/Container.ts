@@ -28,6 +28,7 @@ export function createContainer(context: vscode.ExtensionContext): Container {
 
 	const provider = new DeepSeekChatProvider(
 		chatClient,
+		chatClient,
 		configuration,
 		modelCatalog,
 		tokenEstimator,

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ChatClient } from '../../Core/Chat/ChatClient';
+import { ModelClient } from '../../Core/Chat/ModelClient';
 import { Configuration } from '../../Core/Configuration/Configuration';
 import { Logger } from '../../Core/Logging/Logger';
 import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
@@ -17,11 +18,22 @@ import { parseToolInput, stringifyToolInput, toChatMessages } from './MessageCon
  */
 const USAGE_DATA_PART_MIME = 'usage';
 
+/**
+ * How long a successfully fetched model list is reused before the API is asked
+ * again. VS Code calls the information provider whenever the picker opens, so
+ * without a cache every open would trigger a network round-trip.
+ */
+const MODEL_LIST_TTL_MS = 10 * 60 * 1000;
+
 export class DeepSeekChatProvider
 	implements vscode.LanguageModelChatProvider<vscode.LanguageModelChatInformation>
 {
+	private remoteModelsCache: readonly ModelInfo[] | undefined;
+	private remoteModelsCacheTime = 0;
+
 	constructor(
 		private readonly chatClient: ChatClient,
+		private readonly modelClient: ModelClient,
 		private readonly configuration: Configuration,
 		private readonly modelCatalog: ModelCatalog,
 		private readonly tokenEstimator: TokenEstimator,
@@ -30,18 +42,53 @@ export class DeepSeekChatProvider
 
 	async provideLanguageModelChatInformation(
 		_options: vscode.PrepareLanguageModelChatModelOptions,
-		_token: vscode.CancellationToken,
+		token: vscode.CancellationToken,
 	): Promise<vscode.LanguageModelChatInformation[]> {
-		return this.orderedModels().map((model) => this.toVscodeInformation(model));
+		const models = await this.resolveModels(token);
+		return this.orderedModels(models).map((model) => this.toVscodeInformation(model));
+	}
+
+	/**
+	 * The API's model list is the source of truth; the built-in catalog only
+	 * fills in metadata for known IDs and serves as the fallback when the API
+	 * is unreachable or returns an empty list.
+	 */
+	private async resolveModels(token: vscode.CancellationToken): Promise<readonly ModelInfo[]> {
+		if (this.remoteModelsCache && Date.now() - this.remoteModelsCacheTime < MODEL_LIST_TTL_MS) {
+			return this.remoteModelsCache;
+		}
+
+		const abortController = new AbortController();
+		const cancellationListener = token.onCancellationRequested(() => abortController.abort());
+
+		try {
+			const remote = await this.modelClient.listModels(abortController.signal);
+			if (remote.length > 0) {
+				const resolved = this.modelCatalog.resolve(remote.map((model) => model.id));
+				this.remoteModelsCache = resolved;
+				this.remoteModelsCacheTime = Date.now();
+				return resolved;
+			}
+		} catch (error) {
+			if (!abortController.signal.aborted) {
+				this.logger.warn(
+					'Could not list DeepSeek models; using the built-in catalog instead.',
+					error,
+				);
+			}
+		} finally {
+			cancellationListener.dispose();
+		}
+
+		return this.modelCatalog.getModels();
 	}
 
 	/**
 	 * VS Code preselects the first entry when the user has no stored choice, so
 	 * the model configured via `deepseek.defaultModel` is listed first.
 	 */
-	private orderedModels(): readonly ModelInfo[] {
-		const models = this.modelCatalog.getModels();
-		const preferred = this.modelCatalog.findById(this.configuration.getDefaultModel());
+	private orderedModels(models: readonly ModelInfo[]): readonly ModelInfo[] {
+		const preferred = models.find((model) => model.id === this.configuration.getDefaultModel());
 		if (!preferred) {
 			return models;
 		}

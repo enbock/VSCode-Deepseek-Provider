@@ -29,8 +29,9 @@ travel with Settings Sync, backups, or shared profiles.
 3. Choose **`$(key) Set API Key`** and paste your DeepSeek API key into the
    masked input field. The value is trimmed before it is stored; an empty input
    is rejected and stores nothing.
-4. In Copilot Chat, pick one of the DeepSeek models
-   (`deepseek-flash` / `deepseek-v4-pro`) from the model picker.
+4. In Copilot Chat, pick one of the DeepSeek models from the model picker.
+   The list is loaded from the API's `GET /models` endpoint; if that call fails
+   the built-in catalog (`deepseek-flash` / `deepseek-v4-pro`) is offered instead.
 
 The key is saved through VS Code's `SecretStorage` API under the key
 `deepseek.apiKey`. On Windows it is encrypted with DPAPI and stored in the
@@ -85,14 +86,21 @@ You can also store the key in `settings.json` (not recommended):
 
 ## Models
 
+The model picker is populated from the API's model list (`GET /models`), so
+models released after this extension shipped show up automatically. The built-in
+catalog supplies the display name, token limits, and capabilities for known
+models:
+
 | Model             | Use for                                              |
 | ----------------- | ---------------------------------------------------- |
 | `deepseek-flash`  | Fast, low cost; everyday chat and agent work.        |
 | `deepseek-v4-pro` | Slower, pricier; harder reasoning and long context.  |
 
-Both models accept a 1M-token context window and support tool calling.
-`deepseek.defaultModel` only decides which entry the model picker preselects —
-you can still switch models at any time in Copilot Chat.
+Models the catalog does not know yet are still listed with conservative
+defaults. If the API call fails or returns an empty list, the provider falls
+back to the catalog above. Both catalog models accept a 1M-token context window
+and support tool calling. `deepseek.defaultModel` only decides which entry the
+model picker preselects — you can still switch models at any time in Copilot Chat.
 
 ## Context window usage
 

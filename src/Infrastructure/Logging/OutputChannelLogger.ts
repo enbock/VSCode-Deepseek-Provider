@@ -12,8 +12,9 @@ export class OutputChannelLogger implements Logger {
 		this.channel.appendLine(`[info] ${message}`);
 	}
 
-	warn(message: string): void {
-		this.channel.appendLine(`[warn] ${message}`);
+	warn(message: string, error?: unknown): void {
+		const detail = error instanceof Error ? ` ${error.message}` : '';
+		this.channel.appendLine(`[warn] ${message}${detail}`);
 	}
 
 	error(message: string, error?: unknown): void {
