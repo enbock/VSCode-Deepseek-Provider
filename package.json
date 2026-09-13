@@ -1,0 +1,79 @@
+{
+  "name": "vscode-deepseek-provider",
+  "displayName": "DeepSeek Model Provider",
+  "description": "Bring your own DeepSeek cloud API key to GitHub Copilot in VS Code.",
+  "version": "0.1.0",
+  "publisher": "enbock",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.137.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "deepseek",
+    "copilot",
+    "model provider",
+    "language model"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "deepseek",
+        "displayName": "DeepSeek"
+      }
+    ],
+    "commands": [
+      {
+        "command": "deepseek.manage",
+        "title": "DeepSeek: Configure API Key",
+        "category": "DeepSeek"
+      }
+    ],
+    "configuration": {
+      "title": "DeepSeek",
+      "properties": {
+        "deepseek.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "DeepSeek API key. Prefer storing it via the 'DeepSeek: Configure API Key' command (secure storage)."
+        },
+        "deepseek.baseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com",
+          "description": "Base URL of the DeepSeek-compatible API."
+        },
+        "deepseek.defaultModel": {
+          "type": "string",
+          "default": "deepseek-chat",
+          "description": "Default model used when Copilot does not select one explicitly."
+        },
+        "deepseek.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "description": "Sampling temperature for generation."
+        },
+        "deepseek.maxOutputTokens": {
+          "type": "number",
+          "default": 8192,
+          "description": "Maximum number of tokens to generate per response."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "@types/vscode": "^1.137.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.2"
+  }
+}
