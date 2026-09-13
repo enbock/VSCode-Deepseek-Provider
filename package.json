@@ -2,7 +2,7 @@
   "name": "vscode-deepseek-provider",
   "displayName": "DeepSeek Model Provider",
   "description": "Bring your own DeepSeek cloud API key to GitHub Copilot in VS Code.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "enbock",
   "license": "MIT",
   "repository": {
@@ -44,6 +44,11 @@
         "title": "DeepSeek: Generate Commit Message",
         "category": "DeepSeek",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "deepseek.checkSetup",
+        "title": "DeepSeek: Check Setup",
+        "category": "DeepSeek"
       }
     ],
     "menus": {

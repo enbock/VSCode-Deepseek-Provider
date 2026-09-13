@@ -128,6 +128,7 @@ type. It sends a small window of the code before and after the cursor to
 - Completions are best-effort: a failed or cancelled request simply produces no
   ghost text instead of an error notification.
 
+
 ## Commit messages
 
 Run **DeepSeek: Generate Commit Message** from the Command Palette
@@ -146,6 +147,22 @@ command above is a standalone alternative that does not require Copilot Chat.
 
 The command needs a Git repository open in the workspace and uses the built-in
 Git extension to read the diff — no additional setup beyond the API key.
+
+## Troubleshooting
+
+Run **`DeepSeek: Check Setup`** from the Command Palette. It reports at a glance:
+
+- whether an API key was found (Secret Storage, `DEEPSEEK_API_KEY`, or settings),
+- whether editor inline suggestions and `deepseek.enableCompletions` are on,
+- which model completions use,
+- whether GitHub Copilot is enabled (it can supply its own completions when you
+  are signed in, which is easy to confuse with DeepSeek's),
+- whether the built-in Git extension is available for commit messages,
+- the configured base URL.
+
+DeepSeek completions and commit messages only need the DeepSeek API key — no
+GitHub sign-in. The chat view itself is GitHub Copilot's UI and always requires
+a GitHub account.
 
 ## Development
 
@@ -176,6 +193,7 @@ The code follows Clean Architecture with folders grouped by responsibility
   - `Completion/` — the `DeepSeekCompletionProvider` inline completion provider.
   - `CommitMessage/` — the `GenerateCommitMessageCommand` use case.
   - `Configuration/` — the `ManageCommand` use case.
+  - `Diagnostics/` — the `CheckSetupCommand` use case.
   - `Composition/` — the manual DI container
     (`src/Application/Composition/Container.ts`).
 - `src/Infrastructure` — adapters implementing the domain ports.

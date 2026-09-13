@@ -7,6 +7,7 @@ import { TokenEstimator } from '../../Core/Chat/TokenEstimator';
 import { DeepSeekChatProvider } from '../Chat/DeepSeekChatProvider';
 import { DeepSeekCompletionProvider } from '../Completion/DeepSeekCompletionProvider';
 import { GenerateCommitMessageCommand } from '../CommitMessage/GenerateCommitMessageCommand';
+import { CheckSetupCommand } from '../Diagnostics/CheckSetupCommand';
 import { ManageCommand } from '../Configuration/ManageCommand';
 
 export interface Container {
@@ -14,6 +15,7 @@ export interface Container {
 	readonly completionProvider: DeepSeekCompletionProvider;
 	readonly manageCommand: ManageCommand;
 	readonly generateCommitMessageCommand: GenerateCommitMessageCommand;
+	readonly checkSetupCommand: CheckSetupCommand;
 	dispose(): void;
 }
 
@@ -38,12 +40,14 @@ export function createContainer(context: vscode.ExtensionContext): Container {
 		configuration,
 		logger,
 	);
+	const checkSetupCommand = new CheckSetupCommand(configuration);
 
 	return {
 		provider,
 		completionProvider,
 		manageCommand,
 		generateCommitMessageCommand,
+		checkSetupCommand,
 		dispose() {
 			logger.dispose();
 		},

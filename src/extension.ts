@@ -10,6 +10,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('deepseek.generateCommitMessage', () =>
 			container.generateCommitMessageCommand.run(),
 		),
+		vscode.commands.registerCommand('deepseek.checkSetup', () => container.checkSetupCommand.run()),
 		vscode.languages.registerInlineCompletionItemProvider(
 			[{ scheme: 'file' }, { scheme: 'untitled' }],
 			container.completionProvider,
