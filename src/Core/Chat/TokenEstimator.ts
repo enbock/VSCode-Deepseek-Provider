@@ -1,8 +1,6 @@
 /**
- * Approximate token counter. DeepSeek uses a BPE tokenizer; a precise count
- * would require the actual tokenizer, so this heuristic treats CJK characters
- * as roughly one token each and groups the remaining characters into blocks of
- * four. It is only used for context-window bookkeeping, never for billing.
+ * DeepSeek uses a BPE tokenizer, so this heuristic (CJK ≈ 1 token, other
+ * characters in blocks of four) is only for context-window bookkeeping.
  */
 export class TokenEstimator {
 	estimate(text: string): number {

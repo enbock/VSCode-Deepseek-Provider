@@ -8,10 +8,6 @@ export interface ToolDefinition {
 
 export type ToolChoiceMode = 'auto' | 'required' | 'none';
 
-/**
- * A request to complete a chat conversation. The model-specific wire format
- * is produced by the infrastructure client, keeping this type API-agnostic.
- */
 export interface ChatRequest {
 	readonly model: string;
 	readonly messages: readonly ChatMessage[];

@@ -1,14 +1,10 @@
 import * as vscode from 'vscode';
-import { IConfiguration } from '../../Core/Ports/IConfiguration';
-import { IApiKeyStore } from '../../Core/Ports/IApiKeyStore';
+import { Configuration } from '../../Core/Configuration/Configuration';
+import { ApiKeyStore } from '../../Core/Configuration/ApiKeyStore';
 
 const SECRET_KEY = 'deepseek.apiKey';
 
-/**
- * Reads extension configuration from VS Code settings and resolves the API key
- * from secure storage first, falling back to the (non-secret) settings value.
- */
-export class VscodeConfiguration implements IConfiguration, IApiKeyStore {
+export class VscodeConfiguration implements Configuration, ApiKeyStore {
 	constructor(private readonly secrets: vscode.SecretStorage) {}
 
 	async getApiKey(): Promise<string | undefined> {

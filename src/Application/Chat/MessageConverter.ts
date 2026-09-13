@@ -1,17 +1,12 @@
 import * as vscode from 'vscode';
-import { ChatMessage, ToolCall } from '../../Core/Models/ChatMessage';
+import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
 
-/** Union of the stable VS Code chat parts we understand. */
 type ChatPart =
 	| vscode.LanguageModelTextPart
 	| vscode.LanguageModelToolCallPart
 	| vscode.LanguageModelToolResultPart
 	| vscode.LanguageModelDataPart;
 
-/**
- * Serializes a tool-call input object to a JSON string for the wire format.
- * Falls back to an empty object when the input is not stringifiable.
- */
 export function stringifyToolInput(input: object): string {
 	try {
 		return JSON.stringify(input);
@@ -20,11 +15,7 @@ export function stringifyToolInput(input: object): string {
 	}
 }
 
-/**
- * Parses a JSON string received from the model into an object. Falls back to
- * an empty object on malformed payloads so a single bad tool call cannot break
- * the whole stream.
- */
+/** Falls back to an empty object so one malformed call cannot break the stream. */
 export function parseToolInput(json: string): object {
 	try {
 		const value: unknown = JSON.parse(json);
@@ -34,11 +25,7 @@ export function parseToolInput(json: string): object {
 	}
 }
 
-/**
- * Converts VS Code chat request messages into the API-agnostic chat message
- * model. Tool results are emitted as their own `tool` messages because the
- * OpenAI-compatible wire format requires them to be separate entries.
- */
+/** Tool results become separate `tool` messages, as the wire format requires. */
 export function toChatMessages(
 	messages: readonly vscode.LanguageModelChatRequestMessage[],
 	systemPrompt?: string,

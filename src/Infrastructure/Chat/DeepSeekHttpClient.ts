@@ -1,19 +1,18 @@
-import { IChatClient } from '../../Core/Ports/IChatClient';
-import { IConfiguration } from '../../Core/Ports/IConfiguration';
-import { ILogger } from '../../Core/Ports/ILogger';
-import { ChatMessage, ToolCall } from '../../Core/Models/ChatMessage';
-import { ChatRequest } from '../../Core/Models/ChatRequest';
-import { ChatStreamChunk } from '../../Core/Models/ChatStreamChunk';
-import { ApiError, ConfigurationError } from '../../Core/Errors/DomainErrors';
+import { ChatClient } from '../../Core/Chat/ChatClient';
+import { Configuration } from '../../Core/Configuration/Configuration';
+import { Logger } from '../../Core/Logging/Logger';
+import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
+import { ChatRequest } from '../../Core/Chat/ChatRequest';
+import { ChatStreamChunk } from '../../Core/Chat/ChatStreamChunk';
+import { ApiError } from '../../Core/Chat/ApiError';
+import { ConfigurationError } from '../../Core/Configuration/ConfigurationError';
 
-/** Wire format for a single tool call on an assistant message. */
 interface WireToolCall {
 	id: string;
 	type: 'function';
 	function: { name: string; arguments: string };
 }
 
-/** Wire format for a single outgoing message (OpenAI-compatible). */
 interface WireMessage {
 	role: 'system' | 'user' | 'assistant' | 'tool';
 	content: string | null;
@@ -21,7 +20,6 @@ interface WireMessage {
 	tool_call_id?: string;
 }
 
-/** Wire format for a single SSE chunk delivered by the completion stream. */
 interface SseChunk {
 	choices?: Array<{
 		delta?: {
@@ -39,17 +37,16 @@ interface SseChunk {
 const SSE_DATA_PREFIX = 'data:';
 const SSE_DONE = '[DONE]';
 
-/**
- * DeepSeek HTTP adapter. Talks the OpenAI-compatible `/chat/completions`
- * endpoint and streams Server-Sent Events back as an async sequence.
- */
-export class DeepSeekHttpClient implements IChatClient {
+export class DeepSeekHttpClient implements ChatClient {
 	constructor(
-		private readonly configuration: IConfiguration,
-		private readonly logger: ILogger,
+		private readonly configuration: Configuration,
+		private readonly logger: Logger,
 	) {}
 
-	async *streamChat(request: ChatRequest, signal: AbortSignal): AsyncIterable<ChatStreamChunk> {
+	async *streamChat(
+		request: ChatRequest,
+		signal: AbortSignal,
+	): ReturnOrThrowError<AsyncIterable<ChatStreamChunk>, ConfigurationError | ApiError | DOMException> {
 		const apiKey = await this.configuration.getApiKey();
 		if (!apiKey) {
 			throw new ConfigurationError(
@@ -250,7 +247,7 @@ export class DeepSeekHttpClient implements IChatClient {
 		try {
 			detail = (await response.text()).slice(0, 500);
 		} catch {
-			// Ignore body-read failures; the status code is still meaningful.
+			// The status code is still meaningful without the body.
 		}
 		const message = detail
 			? `DeepSeek API error (${response.status}): ${detail}`

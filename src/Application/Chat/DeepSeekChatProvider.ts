@@ -1,28 +1,23 @@
 import * as vscode from 'vscode';
-import { IChatClient } from '../../Core/Ports/IChatClient';
-import { IConfiguration } from '../../Core/Ports/IConfiguration';
-import { ILogger } from '../../Core/Ports/ILogger';
-import { ModelCatalog } from '../../Core/Services/ModelCatalog';
-import { TokenEstimator } from '../../Core/Services/TokenEstimator';
-import { ModelInfo } from '../../Core/Models/ModelInfo';
-import { ChatRequest, ToolChoiceMode, ToolDefinition } from '../../Core/Models/ChatRequest';
+import { ChatClient } from '../../Core/Chat/ChatClient';
+import { Configuration } from '../../Core/Configuration/Configuration';
+import { Logger } from '../../Core/Logging/Logger';
+import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
+import { TokenEstimator } from '../../Core/Chat/TokenEstimator';
+import { ModelInfo } from '../../Core/Chat/ModelInfo';
+import { ChatRequest, ToolChoiceMode, ToolDefinition } from '../../Core/Chat/ChatRequest';
+import { ChatProviderError } from './ChatProviderError';
 import { parseToolInput, toChatMessages } from './MessageConverter';
 
-/**
- * Bridges the VS Code language-model API to the DeepSeek chat client.
- * This is the composition/controlling layer: it converts VS Code types into
- * core domain types, invokes the infrastructure client, and streams results
- * back as VS Code response parts.
- */
 export class DeepSeekChatProvider
 	implements vscode.LanguageModelChatProvider<vscode.LanguageModelChatInformation>
 {
 	constructor(
-		private readonly chatClient: IChatClient,
-		private readonly configuration: IConfiguration,
+		private readonly chatClient: ChatClient,
+		private readonly configuration: Configuration,
 		private readonly modelCatalog: ModelCatalog,
 		private readonly tokenEstimator: TokenEstimator,
-		private readonly logger: ILogger,
+		private readonly logger: Logger,
 	) {}
 
 	async provideLanguageModelChatInformation(
@@ -38,7 +33,7 @@ export class DeepSeekChatProvider
 		options: vscode.ProvideLanguageModelChatResponseOptions,
 		progress: vscode.Progress<vscode.LanguageModelResponsePart>,
 		token: vscode.CancellationToken,
-	): Promise<void> {
+	): ReturnOrThrowError<Promise<void>, vscode.CancellationError | ChatProviderError> {
 		const request: ChatRequest = {
 			model: model.id,
 			messages: toChatMessages(messages, this.configuration.getSystemPrompt()),
@@ -63,8 +58,11 @@ export class DeepSeekChatProvider
 				}
 			}
 		} catch (error) {
+			if (abortController.signal.aborted) {
+				throw new vscode.CancellationError();
+			}
 			this.logger.error('DeepSeek chat request failed', error);
-			throw error;
+			throw new ChatProviderError('DeepSeek chat request failed.', error);
 		} finally {
 			cancellationListener.dispose();
 		}

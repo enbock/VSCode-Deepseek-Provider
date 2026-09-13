@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { DeepSeekHttpClient } from '../../Infrastructure/Api/DeepSeekHttpClient';
+import { DeepSeekHttpClient } from '../../Infrastructure/Chat/DeepSeekHttpClient';
 import { VscodeConfiguration } from '../../Infrastructure/Configuration/VscodeConfiguration';
 import { OutputChannelLogger } from '../../Infrastructure/Logging/OutputChannelLogger';
-import { ModelCatalog } from '../../Core/Services/ModelCatalog';
-import { TokenEstimator } from '../../Core/Services/TokenEstimator';
-import { DeepSeekChatProvider } from '../UseCases/DeepSeekChatProvider';
-import { ManageCommand } from '../UseCases/ManageCommand';
+import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
+import { TokenEstimator } from '../../Core/Chat/TokenEstimator';
+import { DeepSeekChatProvider } from '../Chat/DeepSeekChatProvider';
+import { ManageCommand } from '../Configuration/ManageCommand';
 
 export interface Container {
 	readonly provider: DeepSeekChatProvider;
@@ -13,10 +13,6 @@ export interface Container {
 	dispose(): void;
 }
 
-/**
- * Manual composition root. Wires the core services to their infrastructure
- * adapters and exposes the application-level use cases.
- */
 export function createContainer(context: vscode.ExtensionContext): Container {
 	const logger = new OutputChannelLogger();
 	const configuration = new VscodeConfiguration(context.secrets);

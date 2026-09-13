@@ -1,10 +1,5 @@
-import { ModelInfo } from '../Models/ModelInfo';
+import { ModelInfo } from './ModelInfo';
 
-/**
- * Known DeepSeek models. This is domain knowledge and therefore lives in Core;
- * an infrastructure implementation could later replace it with a dynamic
- * `/models` discovery without touching the rest of the system.
- */
 export class ModelCatalog {
 	private readonly models: readonly ModelInfo[] = [
 		{

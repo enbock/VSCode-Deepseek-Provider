@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { createContainer } from './Application/DependencyInjection/Container';
+import { createContainer } from './Application/Composition/Container';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const container = createContainer(context);
@@ -11,6 +11,4 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 }
 
-export function deactivate(): void {
-	// All resources are released through the extension context subscriptions.
-}
+export function deactivate(): void {}

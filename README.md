@@ -49,13 +49,41 @@ Press `F5` to launch an Extension Development Host.
 
 ## Architecture
 
-The code follows Clean Architecture:
+The code follows Clean Architecture with folders grouped by responsibility
+(bounded context). Interfaces are named without an `I` prefix.
 
-- `src/Core` — domain models, business services, and ports (interfaces).
-- `src/Infrastructure` — DeepSeek HTTP/SSE client, VS Code configuration and
-  secret storage, logging.
-- `src/Application` — provider orchestration and the manual DI container
-  (`src/Application/DependencyInjection/Container.ts`).
+- `src/Core` — domain models, business services, and ports.
+  - `Chat/` — chat request/response types, the `ChatClient` port, the
+    `ApiError` failure type, the `ModelInfo`/`ModelCatalog` model knowledge,
+    and the `TokenEstimator` service.
+  - `Configuration/` — the `Configuration` and `ApiKeyStore` ports plus
+    `ConfigurationError`.
+  - `Logging/` — the `Logger` port.
+- `src/Application` — orchestration; depends only on `src/Core`.
+  - `Chat/` — the `DeepSeekChatProvider`, the `ChatProviderError` failure type,
+    and the VS Code message converter.
+  - `Configuration/` — the `ManageCommand` use case.
+  - `Composition/` — the manual DI container
+    (`src/Application/Composition/Container.ts`).
+- `src/Infrastructure` — adapters implementing the domain ports.
+  - `Chat/` — the DeepSeek HTTP/SSE client.
+  - `Configuration/` — VS Code settings and secret storage.
+  - `Logging/` — the output channel logger.
+
+Global type declarations live in `src/global.d.ts`. The `ReturnOrThrowError`
+helper documents which errors a call may throw without changing its return
+type — for example:
+
+```ts
+streamChat(request, signal): ReturnOrThrowError<AsyncIterable<ChatStreamChunk>, ApiError>;
+```
+
+Each layer translates failures of the layer below into its own error type
+rather than forwarding them: `DeepSeekChatProvider` catches
+`ConfigurationError`, `ApiError`, and transport failures and rethrows a single
+[`ChatProviderError`](src/Application/Chat/ChatProviderError.ts) with the
+original error attached as `cause`. Cancellation is not a failure and is
+reported as `vscode.CancellationError`.
 
 ## License
 

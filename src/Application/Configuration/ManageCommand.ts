@@ -1,19 +1,15 @@
 import * as vscode from 'vscode';
-import { IApiKeyStore } from '../../Core/Ports/IApiKeyStore';
-import { ModelCatalog } from '../../Core/Services/ModelCatalog';
+import { ApiKeyStore } from '../../Core/Configuration/ApiKeyStore';
+import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
 
 interface CommandOption {
 	label: string;
 	value: 'set' | 'clear' | 'model';
 }
 
-/**
- * Handler for the "DeepSeek: Configure API Key" management command. Lets the
- * user store/clear the API key in secure storage and pick a default model.
- */
 export class ManageCommand {
 	constructor(
-		private readonly apiKeyStore: IApiKeyStore,
+		private readonly apiKeyStore: ApiKeyStore,
 		private readonly modelCatalog: ModelCatalog,
 	) {}
 
@@ -51,7 +47,7 @@ export class ManageCommand {
 			ignoreFocusOut: true,
 		});
 		if (key === undefined) {
-			return; // User cancelled.
+			return;
 		}
 		if (key.trim().length === 0) {
 			void vscode.window.showWarningMessage('DeepSeek: the API key was empty; nothing was stored.');

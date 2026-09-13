@@ -1,10 +1,7 @@
 import * as vscode from 'vscode';
-import { ILogger } from '../../Core/Ports/ILogger';
+import { Logger } from '../../Core/Logging/Logger';
 
-/**
- * Logs to a dedicated VS Code output channel.
- */
-export class OutputChannelLogger implements ILogger {
+export class OutputChannelLogger implements Logger {
 	private readonly channel: vscode.OutputChannel;
 
 	constructor() {
