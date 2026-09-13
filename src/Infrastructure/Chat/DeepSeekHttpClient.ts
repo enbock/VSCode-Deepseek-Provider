@@ -86,6 +86,19 @@ export class DeepSeekHttpClient implements ChatClient {
 		yield* this.streamBody(response.body);
 	}
 
+	async complete(
+		request: ChatRequest,
+		signal: AbortSignal,
+	): ReturnOrThrowError<Promise<string>, ConfigurationError | ApiError | DOMException> {
+		let text = '';
+		for await (const chunk of this.streamChat(request, signal)) {
+			if (chunk.text) {
+				text += chunk.text;
+			}
+		}
+		return text;
+	}
+
 	private toWireRequest(request: ChatRequest): object {
 		const body: Record<string, unknown> = {
 			model: request.model,

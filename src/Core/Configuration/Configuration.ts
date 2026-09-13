@@ -5,4 +5,8 @@ export interface Configuration {
 	getTemperature(): number;
 	getMaxOutputTokens(): number;
 	getSystemPrompt(): string | undefined;
+	isCompletionEnabled(): boolean;
+	getCompletionModel(): string;
+	getCompletionTemperature(): number;
+	getCompletionMaxTokens(): number;
 }

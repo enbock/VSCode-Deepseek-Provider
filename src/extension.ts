@@ -7,6 +7,13 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		vscode.lm.registerLanguageModelChatProvider('deepseek', container.provider),
 		vscode.commands.registerCommand('deepseek.manage', () => container.manageCommand.run()),
+		vscode.commands.registerCommand('deepseek.generateCommitMessage', () =>
+			container.generateCommitMessageCommand.run(),
+		),
+		vscode.languages.registerInlineCompletionItemProvider(
+			[{ scheme: 'file' }, { scheme: 'untitled' }],
+			container.completionProvider,
+		),
 		{ dispose: () => container.dispose() },
 	);
 }

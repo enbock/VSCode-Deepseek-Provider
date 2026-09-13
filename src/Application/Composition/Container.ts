@@ -5,11 +5,15 @@ import { OutputChannelLogger } from '../../Infrastructure/Logging/OutputChannelL
 import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
 import { TokenEstimator } from '../../Core/Chat/TokenEstimator';
 import { DeepSeekChatProvider } from '../Chat/DeepSeekChatProvider';
+import { DeepSeekCompletionProvider } from '../Completion/DeepSeekCompletionProvider';
+import { GenerateCommitMessageCommand } from '../CommitMessage/GenerateCommitMessageCommand';
 import { ManageCommand } from '../Configuration/ManageCommand';
 
 export interface Container {
 	readonly provider: DeepSeekChatProvider;
+	readonly completionProvider: DeepSeekCompletionProvider;
 	readonly manageCommand: ManageCommand;
+	readonly generateCommitMessageCommand: GenerateCommitMessageCommand;
 	dispose(): void;
 }
 
@@ -27,11 +31,19 @@ export function createContainer(context: vscode.ExtensionContext): Container {
 		tokenEstimator,
 		logger,
 	);
+	const completionProvider = new DeepSeekCompletionProvider(chatClient, configuration, logger);
 	const manageCommand = new ManageCommand(configuration, modelCatalog);
+	const generateCommitMessageCommand = new GenerateCommitMessageCommand(
+		chatClient,
+		configuration,
+		logger,
+	);
 
 	return {
 		provider,
+		completionProvider,
 		manageCommand,
+		generateCommitMessageCommand,
 		dispose() {
 			logger.dispose();
 		},

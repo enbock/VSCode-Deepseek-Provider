@@ -51,6 +51,22 @@ export class VscodeConfiguration implements Configuration, ApiKeyStore {
 		return prompt || undefined;
 	}
 
+	isCompletionEnabled(): boolean {
+		return this.config().get<boolean>('enableCompletions') ?? true;
+	}
+
+	getCompletionModel(): string {
+		return this.config().get<string>('completionModel') || this.getDefaultModel();
+	}
+
+	getCompletionTemperature(): number {
+		return this.config().get<number>('completionTemperature') ?? 0;
+	}
+
+	getCompletionMaxTokens(): number {
+		return this.config().get<number>('completionMaxTokens') ?? 256;
+	}
+
 	private config(): vscode.WorkspaceConfiguration {
 		return vscode.workspace.getConfiguration('deepseek');
 	}

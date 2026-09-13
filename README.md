@@ -4,7 +4,12 @@ Bring your own DeepSeek cloud API key to GitHub Copilot Chat in VS Code.
 
 This extension registers a **language model chat provider** (`deepseek`) so that
 GitHub Copilot can use the [DeepSeek API](https://api-docs.deepseek.com) as a
-model backend.
+model backend. It also adds two extra ways to use DeepSeek outside Copilot Chat:
+
+- **Inline code completions** (ghost text) powered by DeepSeek.
+- A **`DeepSeek: Generate Commit Message`** command that fills the Source
+  Control input box with a message describing your staged (or working-tree)
+  changes.
 
 ## Requirements
 
@@ -73,6 +78,10 @@ You can also store the key in `settings.json` (not recommended):
 | `deepseek.defaultModel`  | `deepseek-flash`         | Model preselected in the picker.         |
 | `deepseek.temperature`   | `0.7`                    | Sampling temperature.                    |
 | `deepseek.maxOutputTokens` | `8192`                 | Max tokens generated per response.       |
+| `deepseek.enableCompletions` | `true`               | Enable inline (ghost text) completions.  |
+| `deepseek.completionModel` | `deepseek-flash`       | Model used for inline completions.       |
+| `deepseek.completionTemperature` | `0`             | Sampling temperature for completions.    |
+| `deepseek.completionMaxTokens` | `256`             | Max tokens generated per completion.     |
 
 ## Models
 
@@ -105,6 +114,39 @@ overflows.
 response may generate; it does not change the size of the context window shown by
 the indicator.
 
+## Inline code completions
+
+When `deepseek.enableCompletions` is `true` (the default), the extension registers
+an inline completion provider that offers DeepSeek-generated ghost text while you
+type. It sends a small window of the code before and after the cursor to
+`deepseek.completionModel` and inserts the continuation at the cursor.
+
+- Toggle it off with `"deepseek.enableCompletions": false`.
+- The completion model, temperature, and response length are controlled by
+  `deepseek.completionModel`, `deepseek.completionTemperature`, and
+  `deepseek.completionMaxTokens`.
+- Completions are best-effort: a failed or cancelled request simply produces no
+  ghost text instead of an error notification.
+
+## Commit messages
+
+Run **DeepSeek: Generate Commit Message** from the Command Palette
+(`Ctrl+Shift+P`) to describe the current repository's changes:
+
+- Staged changes (`git diff --cached`) are used when present.
+- Otherwise the working-tree changes are used, so the command still works before
+  `git add`.
+- The generated message follows the Conventional Commits format
+  (`type(scope): subject`) and is written into the Source Control input box,
+  ready to review and commit.
+
+Copilot Chat's own sparkle button in the Source Control view also uses DeepSeek
+when a DeepSeek model is the model selected in the chat model picker; the
+command above is a standalone alternative that does not require Copilot Chat.
+
+The command needs a Git repository open in the workspace and uses the built-in
+Git extension to read the diff — no additional setup beyond the API key.
+
 ## Development
 
 ```bash
@@ -131,11 +173,13 @@ The code follows Clean Architecture with folders grouped by responsibility
 - `src/Application` — orchestration; depends only on `src/Core`.
   - `Chat/` — the `DeepSeekChatProvider`, the `ChatProviderError` failure type,
     and the VS Code message converter.
+  - `Completion/` — the `DeepSeekCompletionProvider` inline completion provider.
+  - `CommitMessage/` — the `GenerateCommitMessageCommand` use case.
   - `Configuration/` — the `ManageCommand` use case.
   - `Composition/` — the manual DI container
     (`src/Application/Composition/Container.ts`).
 - `src/Infrastructure` — adapters implementing the domain ports.
-  - `Chat/` — the DeepSeek HTTP/SSE client.
+  - `Chat/` — the DeepSeek HTTP/SSE client (streaming and non-streaming).
   - `Configuration/` — VS Code settings and secret storage.
   - `Logging/` — the output channel logger.
 
