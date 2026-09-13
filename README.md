@@ -13,15 +13,35 @@ model backend.
 
 ## Setup
 
+### Store the API key in Secret Storage (recommended)
+
+This is the secure path: the key never lands in `settings.json`, so it does not
+travel with Settings Sync, backups, or shared profiles.
+
 1. Install the extension.
-2. Run the command **DeepSeek: Configure API Key** (`deepseek.manage`) and
-   choose **Set API Key**. The key is stored in VS Code **Secret Storage**, not
-   in your settings file.
-3. In Copilot Chat, pick one of the DeepSeek models
+2. Open the Command Palette (`Ctrl+Shift+P`) and run
+   **DeepSeek: Configure API Key** (`deepseek.manage`).
+3. Choose **`$(key) Set API Key`** and paste your DeepSeek API key into the
+   masked input field. The value is trimmed before it is stored; an empty input
+   is rejected and stores nothing.
+4. In Copilot Chat, pick one of the DeepSeek models
    (`deepseek-flash` / `deepseek-v4-pro`) from the model picker.
 
-Alternatively, set the `DEEPSEEK_API_KEY` environment variable and skip the
-command. The key is resolved in this order, first match wins:
+The key is saved through VS Code's `SecretStorage` API under the key
+`deepseek.apiKey`. On Windows it is encrypted with DPAPI and stored in the
+profile's `state.vscdb` — you cannot (and should not) edit it by hand.
+
+- **Where it lives:** per VS Code profile, not in your settings file. Other
+  profiles do not see it, and Settings Sync does not synchronize it.
+- **Change it:** run the command again and choose **Set API Key**; the new
+  value overwrites the old one.
+- **Remove it:** choose **`$(trash) Clear API Key`**. This removes the Secret
+  Storage entry only — it does not touch any other key source (see below).
+
+### Alternative: `DEEPSEEK_API_KEY` environment variable
+
+Set the `DEEPSEEK_API_KEY` environment variable and skip the command entirely.
+The key is resolved in this order, first match wins:
 
 1. **Secret Storage** (the `deepseek.manage` command)
 2. **`DEEPSEEK_API_KEY`** environment variable
@@ -30,11 +50,15 @@ command. The key is resolved in this order, first match wins:
 The environment variable must be visible to the VS Code **extension host**, so
 set it before launching VS Code (on Windows: set it for your user account or
 start VS Code from a shell that exports it) and restart VS Code after changing
-it. A window reload is not always enough. Note that clearing the key with
-**Clear API Key** only removes it from Secret Storage — if `DEEPSEEK_API_KEY` is
-still set, it keeps being used.
+it — a window reload is not always enough. The variable applies to every
+profile.
 
-You can optionally store the key in `settings.json` instead (not recommended):
+If a key exists in both Secret Storage and `DEEPSEEK_API_KEY`, Secret Storage
+wins. **Clear API Key** only removes the Secret Storage entry — if
+`DEEPSEEK_API_KEY` is still set, it keeps being used. Pick one source and use
+the other one as a deliberate fallback, not both with different values.
+
+You can also store the key in `settings.json` (not recommended):
 
 ```json
 "deepseek.apiKey": "sk-..."
