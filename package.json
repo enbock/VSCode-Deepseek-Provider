@@ -5,6 +5,10 @@
   "version": "0.1.0",
   "publisher": "enbock",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enbock/VSCode-Deepseek-Provider.git"
+  },
   "engines": {
     "vscode": "^1.137.0"
   },
