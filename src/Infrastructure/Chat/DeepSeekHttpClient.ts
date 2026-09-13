@@ -3,7 +3,7 @@ import { Configuration } from '../../Core/Configuration/Configuration';
 import { Logger } from '../../Core/Logging/Logger';
 import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
 import { ChatRequest } from '../../Core/Chat/ChatRequest';
-import { ChatStreamChunk } from '../../Core/Chat/ChatStreamChunk';
+import { ChatStreamChunk, TokenUsage } from '../../Core/Chat/ChatStreamChunk';
 import { ApiError } from '../../Core/Chat/ApiError';
 import { ConfigurationError } from '../../Core/Configuration/ConfigurationError';
 
@@ -20,6 +20,13 @@ interface WireMessage {
 	tool_call_id?: string;
 }
 
+interface SseUsage {
+	prompt_tokens?: number;
+	completion_tokens?: number;
+	total_tokens?: number;
+	prompt_tokens_details?: { cached_tokens?: number } | null;
+}
+
 interface SseChunk {
 	choices?: Array<{
 		delta?: {
@@ -32,6 +39,7 @@ interface SseChunk {
 		};
 		finish_reason?: string | null;
 	}>;
+	usage?: SseUsage | null;
 }
 
 const SSE_DATA_PREFIX = 'data:';
@@ -211,6 +219,14 @@ export class DeepSeekHttpClient implements ChatClient {
 			return;
 		}
 
+		// DeepSeek reports usage on the last chunk, which it also uses for the
+		// finish marker, so read it before the choices check to keep a chunk
+		// without choices from swallowing it.
+		const usage = this.toTokenUsage(parsed.usage);
+		if (usage) {
+			yield { usage };
+		}
+
 		const choice = parsed.choices?.[0];
 		if (!choice) {
 			return;
@@ -240,6 +256,34 @@ export class DeepSeekHttpClient implements ChatClient {
 			pendingToolCalls.clear();
 			yield { finishReason: choice.finish_reason };
 		}
+	}
+
+	/**
+	 * VS Code only accepts a complete payload, so incomplete entries are dropped.
+	 * DeepSeek reports usage on the final chunk of the stream only.
+	 */
+	private toTokenUsage(raw: SseUsage | null | undefined): TokenUsage | undefined {
+		if (!raw) {
+			return undefined;
+		}
+		const {
+			prompt_tokens: promptTokens,
+			completion_tokens: completionTokens,
+			total_tokens: totalTokens,
+		} = raw;
+		if (
+			typeof promptTokens !== 'number' ||
+			typeof completionTokens !== 'number' ||
+			typeof totalTokens !== 'number'
+		) {
+			return undefined;
+		}
+		return {
+			promptTokens,
+			completionTokens,
+			totalTokens,
+			cachedTokens: raw.prompt_tokens_details?.cached_tokens ?? 0,
+		};
 	}
 
 	private async toApiError(response: Response): Promise<ApiError> {

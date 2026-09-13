@@ -3,6 +3,7 @@ import { Configuration } from '../../Core/Configuration/Configuration';
 import { ApiKeyStore } from '../../Core/Configuration/ApiKeyStore';
 
 const SECRET_KEY = 'deepseek.apiKey';
+const API_KEY_ENV_VAR = 'DEEPSEEK_API_KEY';
 
 export class VscodeConfiguration implements Configuration, ApiKeyStore {
 	constructor(private readonly secrets: vscode.SecretStorage) {}
@@ -11,6 +12,10 @@ export class VscodeConfiguration implements Configuration, ApiKeyStore {
 		const stored = await this.secrets.get(SECRET_KEY);
 		if (stored) {
 			return stored;
+		}
+		const fromEnvironment = process.env[API_KEY_ENV_VAR]?.trim();
+		if (fromEnvironment) {
+			return fromEnvironment;
 		}
 		const configured = this.config().get<string>('apiKey');
 		return configured || undefined;

@@ -20,6 +20,20 @@ model backend.
 3. In Copilot Chat, pick one of the DeepSeek models
    (`deepseek-flash` / `deepseek-v4-pro`) from the model picker.
 
+Alternatively, set the `DEEPSEEK_API_KEY` environment variable and skip the
+command. The key is resolved in this order, first match wins:
+
+1. **Secret Storage** (the `deepseek.manage` command)
+2. **`DEEPSEEK_API_KEY`** environment variable
+3. **`deepseek.apiKey`** in `settings.json` (not recommended)
+
+The environment variable must be visible to the VS Code **extension host**, so
+set it before launching VS Code (on Windows: set it for your user account or
+start VS Code from a shell that exports it) and restart VS Code after changing
+it. A window reload is not always enough. Note that clearing the key with
+**Clear API Key** only removes it from Secret Storage — if `DEEPSEEK_API_KEY` is
+still set, it keeps being used.
+
 You can optionally store the key in `settings.json` instead (not recommended):
 
 ```json
@@ -30,7 +44,7 @@ You can optionally store the key in `settings.json` instead (not recommended):
 
 | Setting                  | Default                  | Description                              |
 | ------------------------ | ------------------------ | ---------------------------------------- |
-| `deepseek.apiKey`        | `""`                     | API key (prefer Secret Storage).         |
+| `deepseek.apiKey`        | `""`                     | API key (prefer Secret Storage or `DEEPSEEK_API_KEY`). |
 | `deepseek.baseUrl`       | `https://api.deepseek.com` | OpenAI-compatible base URL.           |
 | `deepseek.defaultModel`  | `deepseek-flash`         | Model preselected in the picker.         |
 | `deepseek.temperature`   | `0.7`                    | Sampling temperature.                    |
@@ -46,6 +60,26 @@ You can optionally store the key in `settings.json` instead (not recommended):
 Both models accept a 1M-token context window and support tool calling.
 `deepseek.defaultModel` only decides which entry the model picker preselects —
 you can still switch models at any time in Copilot Chat.
+
+## Context window usage
+
+The provider reports the token accounting DeepSeek returns for every response, so
+Copilot Chat can show how full the context window is and warn you before it
+overflows.
+
+* The **context usage indicator** in the chat input shows the share of the
+  1,048,576-token window used by the last request. It turns yellow at 75% and red
+  at 90%. Select it for a breakdown of what filled the prompt — system
+  instructions, tool definitions, messages, files and tool results.
+* **Automatic compaction**: Copilot sizes the prompt against an input budget of
+  786,432 tokens (the 1M window minus the 393,216 tokens DeepSeek may generate).
+  Once a conversation grows past that budget, older turns are summarized into a
+  shorter history instead of being sent in full. You can also trigger this
+  manually with `/compact` in the chat input.
+
+`deepseek.maxOutputTokens` (default `8192`) caps how many tokens any single
+response may generate; it does not change the size of the context window shown by
+the indicator.
 
 ## Development
 

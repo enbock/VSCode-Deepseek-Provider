@@ -44,7 +44,7 @@
         "deepseek.apiKey": {
           "type": "string",
           "default": "",
-          "description": "DeepSeek API key. Prefer storing it via the 'DeepSeek: Configure API Key' command (secure storage)."
+          "description": "DeepSeek API key. Prefer storing it via the 'DeepSeek: Configure API Key' command (secure storage) or the DEEPSEEK_API_KEY environment variable."
         },
         "deepseek.baseUrl": {
           "type": "string",
