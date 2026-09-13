@@ -30,7 +30,7 @@ export class VscodeConfiguration implements Configuration, ApiKeyStore {
 	}
 
 	getDefaultModel(): string {
-		return this.config().get<string>('defaultModel') || 'deepseek-chat';
+		return this.config().get<string>('defaultModel') || 'deepseek-flash';
 	}
 
 	getTemperature(): number {

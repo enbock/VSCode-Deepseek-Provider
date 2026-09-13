@@ -24,7 +24,20 @@ export class DeepSeekChatProvider
 		_options: vscode.PrepareLanguageModelChatModelOptions,
 		_token: vscode.CancellationToken,
 	): Promise<vscode.LanguageModelChatInformation[]> {
-		return this.modelCatalog.getModels().map((model) => this.toVscodeInformation(model));
+		return this.orderedModels().map((model) => this.toVscodeInformation(model));
+	}
+
+	/**
+	 * VS Code preselects the first entry when the user has no stored choice, so
+	 * the model configured via `deepseek.defaultModel` is listed first.
+	 */
+	private orderedModels(): readonly ModelInfo[] {
+		const models = this.modelCatalog.getModels();
+		const preferred = this.modelCatalog.findById(this.configuration.getDefaultModel());
+		if (!preferred) {
+			return models;
+		}
+		return [preferred, ...models.filter((model) => model.id !== preferred.id)];
 	}
 
 	async provideLanguageModelChatResponse(

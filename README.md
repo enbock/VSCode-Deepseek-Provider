@@ -18,7 +18,7 @@ model backend.
    choose **Set API Key**. The key is stored in VS Code **Secret Storage**, not
    in your settings file.
 3. In Copilot Chat, pick one of the DeepSeek models
-   (`deepseek-chat` / `deepseek-reasoner`) from the model picker.
+   (`deepseek-flash` / `deepseek-v4-pro`) from the model picker.
 
 You can optionally store the key in `settings.json` instead (not recommended):
 
@@ -32,9 +32,20 @@ You can optionally store the key in `settings.json` instead (not recommended):
 | ------------------------ | ------------------------ | ---------------------------------------- |
 | `deepseek.apiKey`        | `""`                     | API key (prefer Secret Storage).         |
 | `deepseek.baseUrl`       | `https://api.deepseek.com` | OpenAI-compatible base URL.           |
-| `deepseek.defaultModel`  | `deepseek-chat`          | Model used when none is selected.        |
+| `deepseek.defaultModel`  | `deepseek-flash`         | Model preselected in the picker.         |
 | `deepseek.temperature`   | `0.7`                    | Sampling temperature.                    |
 | `deepseek.maxOutputTokens` | `8192`                 | Max tokens generated per response.       |
+
+## Models
+
+| Model             | Use for                                              |
+| ----------------- | ---------------------------------------------------- |
+| `deepseek-flash`  | Fast, low cost; everyday chat and agent work.        |
+| `deepseek-v4-pro` | Slower, pricier; harder reasoning and long context.  |
+
+Both models accept a 1M-token context window and support tool calling.
+`deepseek.defaultModel` only decides which entry the model picker preselects —
+you can still switch models at any time in Copilot Chat.
 
 ## Development
 

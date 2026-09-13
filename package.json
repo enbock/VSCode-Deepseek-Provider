@@ -53,8 +53,8 @@
         },
         "deepseek.defaultModel": {
           "type": "string",
-          "default": "deepseek-chat",
-          "description": "Default model used when Copilot does not select one explicitly."
+          "default": "deepseek-flash",
+          "description": "Model preselected in the model picker: 'deepseek-flash' or 'deepseek-v4-pro'."
         },
         "deepseek.temperature": {
           "type": "number",
