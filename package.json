@@ -111,10 +111,10 @@
       }
     }
   },
-  "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "package": "vsce package"
+    "scripts": {
+      "compile": "tsc -p ./",
+      "watch": "tsc -watch -p ./",
+      "package": "vsce package"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

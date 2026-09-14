@@ -1,11 +1,11 @@
 import { ModelInfo } from './ModelInfo';
 
 /**
- * Input and output are billed against the same 1M-token window, so the input
+ * Input and output are billed against the same 128K-token window, so the input
  * budget has to leave room for the largest completion the API accepts.
  */
-const CONTEXT_WINDOW_TOKENS = 1_048_576;
-const MAX_OUTPUT_TOKENS = 393_216;
+const CONTEXT_WINDOW_TOKENS = 131_072;
+const MAX_OUTPUT_TOKENS = 8_192;
 
 export class ModelCatalog {
 	private readonly models: readonly ModelInfo[] = [

@@ -98,8 +98,9 @@ models:
 
 Models the catalog does not know yet are still listed with conservative
 defaults. If the API call fails or returns an empty list, the provider falls
-back to the catalog above. Both catalog models accept a 1M-token context window
-and support tool calling. `deepseek.defaultModel` only decides which entry the
+back to the catalog above. Both catalog models accept a 128K-token context
+window and support tool calling. `deepseek.defaultModel` only decides which
+entry the
 model picker preselects — you can still switch models at any time in Copilot Chat.
 
 ## Context window usage
@@ -109,11 +110,11 @@ Copilot Chat can show how full the context window is and warn you before it
 overflows.
 
 * The **context usage indicator** in the chat input shows the share of the
-  1,048,576-token window used by the last request. It turns yellow at 75% and red
+  131,072-token window used by the last request. It turns yellow at 75% and red
   at 90%. Select it for a breakdown of what filled the prompt — system
   instructions, tool definitions, messages, files and tool results.
 * **Automatic compaction**: Copilot sizes the prompt against an input budget of
-  786,432 tokens (the 1M window minus the 393,216 tokens DeepSeek may generate).
+  122,880 tokens (the 128K window minus the 8,192 tokens DeepSeek may generate).
   Once a conversation grows past that budget, older turns are summarized into a
   shorter history instead of being sent in full. You can also trigger this
   manually with `/compact` in the chat input.
