@@ -1,0 +1,16 @@
+{
+  "actionRunner.actions": [
+    {
+      "name": "Compile",
+      "command": "npm run compile",
+      "cwd": "${workspaceFolder}",
+      "icon": "tools"
+    },
+    {
+      "name": "Package",
+      "command": "npm run package",
+      "cwd": "${workspaceFolder}",
+      "icon": "package"
+    }
+  ]
+}

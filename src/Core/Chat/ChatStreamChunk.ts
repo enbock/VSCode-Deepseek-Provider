@@ -9,6 +9,7 @@ export interface TokenUsage {
 }
 
 export interface ChatStreamChunk {
+	readonly reasoning?: string;
 	readonly text?: string;
 	readonly toolCalls?: readonly ToolCall[];
 	readonly finishReason?: string | null;

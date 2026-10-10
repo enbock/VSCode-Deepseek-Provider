@@ -9,7 +9,13 @@ import { ModelInfo } from '../../Core/Chat/ModelInfo';
 import { ChatRequest, ToolChoiceMode, ToolDefinition } from '../../Core/Chat/ChatRequest';
 import { TokenUsage } from '../../Core/Chat/ChatStreamChunk';
 import { ChatProviderError } from './ChatProviderError';
-import { parseToolInput, stringifyToolInput, toChatMessages } from './MessageConverter';
+import {
+	parseToolInput,
+	stringifyToolInput,
+	THINKING_LABEL,
+	THINKING_SEPARATOR,
+	toChatMessages,
+} from './MessageConverter';
 
 /**
  * MIME type of the data part the chat view reads to fill its context-usage
@@ -115,8 +121,22 @@ export class DeepSeekChatProvider
 		const cancellationListener = token.onCancellationRequested(() => abortController.abort());
 
 		try {
+			let thinkingShown = false;
+			let answerStarted = false;
+
 			for await (const chunk of this.chatClient.streamChat(request, abortController.signal)) {
+				if (chunk.reasoning) {
+					if (!thinkingShown) {
+						thinkingShown = true;
+						progress.report(new vscode.LanguageModelTextPart(THINKING_LABEL));
+					}
+					progress.report(new vscode.LanguageModelTextPart(chunk.reasoning));
+				}
 				if (chunk.text) {
+					if (thinkingShown && !answerStarted) {
+						progress.report(new vscode.LanguageModelTextPart(THINKING_SEPARATOR));
+					}
+					answerStarted = true;
 					progress.report(new vscode.LanguageModelTextPart(chunk.text));
 				}
 				for (const call of chunk.toolCalls ?? []) {

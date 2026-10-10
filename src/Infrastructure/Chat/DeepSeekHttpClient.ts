@@ -36,6 +36,7 @@ interface SseChunk {
 	choices?: Array<{
 		delta?: {
 			content?: string | null;
+			reasoning_content?: string | null;
 			tool_calls?: Array<{
 				index?: number;
 				id?: string;
@@ -282,6 +283,10 @@ export class DeepSeekHttpClient implements ChatClient, ModelClient {
 		const choice = parsed.choices?.[0];
 		if (!choice) {
 			return;
+		}
+
+		if (choice.delta?.reasoning_content) {
+			yield { reasoning: choice.delta.reasoning_content };
 		}
 
 		if (choice.delta?.content) {

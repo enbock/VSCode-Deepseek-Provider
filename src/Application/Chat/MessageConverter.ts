@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
 
+export const THINKING_LABEL = '**Thinking**\n\n';
+export const THINKING_SEPARATOR = '\n\n---\n\n';
+
 type ChatPart =
 	| vscode.LanguageModelTextPart
 	| vscode.LanguageModelToolCallPart
@@ -76,11 +79,23 @@ function convertAssistantMessage(
 		}
 	}
 
+	text = stripThinking(text);
+
 	return {
 		role: 'assistant',
 		content: text.length > 0 ? text : null,
 		...(toolCalls.length > 0 ? { toolCalls } : {}),
 	};
+}
+
+function stripThinking(text: string): string {
+	const start = text.indexOf(THINKING_LABEL);
+	if (start < 0) {
+		return text;
+	}
+	const after = start + THINKING_LABEL.length;
+	const sep = text.indexOf(THINKING_SEPARATOR, after);
+	return sep >= 0 ? text.slice(sep + THINKING_SEPARATOR.length) : '';
 }
 
 function convertUserMessage(
