@@ -17,6 +17,7 @@ interface WireToolCall {
 interface WireMessage {
 	role: 'system' | 'user' | 'assistant' | 'tool';
 	content: string | null;
+	reasoning_content?: string | null;
 	tool_calls?: WireToolCall[];
 	tool_call_id?: string;
 }
@@ -180,6 +181,12 @@ export class DeepSeekHttpClient implements ChatClient, ModelClient {
 				return {
 					role: 'assistant',
 					content: message.content,
+					// DeepSeek's thinking mode requires the chain of thought to be
+					// replayed on assistant turns whenever the request carries
+					// tools, otherwise the API rejects the request with a 400.
+					...(message.reasoningContent
+						? { reasoning_content: message.reasoningContent }
+						: {}),
 					...(message.toolCalls && message.toolCalls.length > 0
 						? {
 								tool_calls: message.toolCalls.map((call) => this.toWireToolCall(call)),

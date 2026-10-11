@@ -143,33 +143,74 @@ API always streams it first.
 Because the thinking text is reported as `LanguageModelTextPart`s, VS Code treats
 it as part of the assistant's response and echoes it back as assistant `content` in
 the next request. Sending the reasoning back as answer content would waste tokens
-and can degrade later turns, so `convertAssistantMessage` strips the fenced block
-after accumulating the text parts:
+and can degrade later turns, so `convertAssistantMessage` splits the fenced block
+off the text parts before building the `ChatMessage`:
 
 ```ts
-function stripThinking(text: string): string {
+function splitThinking(text: string): { content: string; reasoning: string | null } {
 	const start = text.indexOf(THINKING_LABEL);
 	if (start < 0) {
-		return text;
+		return { content: text, reasoning: null };
 	}
 	const after = start + THINKING_LABEL.length;
 	const sep = text.indexOf(THINKING_SEPARATOR, after);
-	return sep >= 0 ? text.slice(sep + THINKING_SEPARATOR.length) : '';
+	if (sep < 0) {
+		return { content: '', reasoning: text.slice(after) };
+	}
+	return {
+		content: text.slice(sep + THINKING_SEPARATOR.length),
+		reasoning: text.slice(after, sep),
+	};
 }
 ```
 
-`convertAssistantMessage` applies this to the assembled text before building the
-`ChatMessage`. If a turn produced only thinking (no separator), the result is an
+The extracted reasoning is **not** discarded: it is carried on the `ChatMessage`
+as the optional `reasoningContent` field (`src/Core/Chat/ChatMessage.ts`) so it can
+be replayed on the wire. DeepSeek's thinking mode requires the chain of thought to
+be passed back on every replayed assistant message whenever the request carries the
+`tools` parameter — including turns where the model did not call a tool — and
+rejects the request with HTTP 400 otherwise (`The reasoning_content in the thinking
+mode must be passed back to the API`). Agent flows such as sub-agent tool calls hit
+this on the request that follows the tool result, which is why dropping the block
+broke them.
+
+`splitThinking` returns `reasoning: null` when no thinking block is present, so
+messages without reasoning omit the field entirely instead of sending an empty
+string. If a turn produced only thinking (no separator), `content` becomes an
 empty string and the message keeps `content: null` as before.
 
-### 6. Edge cases
+### 6. Wire replay — `src/Infrastructure/Chat/DeepSeekHttpClient.ts`
+
+The assistant branch of `toWireMessage` forwards the preserved reasoning as the
+`reasoning_content` field next to `content`/`tool_calls`:
+
+```ts
+case 'assistant':
+	return {
+		role: 'assistant',
+		content: message.content,
+		...(message.reasoningContent
+			? { reasoning_content: message.reasoningContent }
+			: {}),
+		...(message.toolCalls && message.toolCalls.length > 0
+			? { tool_calls: message.toolCalls.map((call) => this.toWireToolCall(call)) }
+			: {}),
+	};
+```
+
+`WireMessage` gains an optional `reasoning_content?: string | null`. The field is
+only emitted when reasoning is present, so non-thinking turns and models keep the
+plain OpenAI message shape.
+
+### 7. Edge cases
 
 - **Reasoning with no final text**: label and reasoning are shown; no separator is
   emitted. On the next turn the whole block is stripped and `content` is `null`.
 - **Tool calls after reasoning**: the first assistant turn contains thinking text
   and tool calls but no answer text, so no separator is emitted. The converter
-  strips the thinking and keeps the tool calls; DeepSeek receives a clean
-  assistant message with `tool_calls` only.
+  separates the thinking (kept as `reasoningContent`) from the answer and keeps the
+  tool calls; DeepSeek receives an assistant message carrying both `reasoning_content`
+  and `tool_calls`, which is the shape its thinking-mode tool-call loop requires.
 - **Usage chunk**: usage is already yielded before the choice content in
   `parseChunk`, and typically arrives on the final chunk, after all text; the new
   reasoning branch does not affect its ordering.
@@ -188,11 +229,28 @@ Implemented the thinking-text feature exactly as specified in the Technical Desi
 ### Files changed
 - `src/Infrastructure/Chat/DeepSeekHttpClient.ts` — added `reasoning_content?: string | null;` to the `SseChunk` `delta`, and in `parseChunk` yield `{ reasoning: choice.delta.reasoning_content }` after the usage block and before the content yield.
 - `src/Core/Chat/ChatStreamChunk.ts` — added `readonly reasoning?: string;` as the first field of `ChatStreamChunk`.
-- `src/Application/Chat/MessageConverter.ts` — exported `THINKING_LABEL` and `THINKING_SEPARATOR`; added `stripThinking` and applied it to the assembled `text` in `convertAssistantMessage` before building the returned `ChatMessage`.
+- `src/Application/Chat/MessageConverter.ts` — exported `THINKING_LABEL` and `THINKING_SEPARATOR`; added `splitThinking` and applied it to the assembled `text` in `convertAssistantMessage` before building the returned `ChatMessage`, carrying the fenced reasoning on as `reasoningContent` instead of discarding it.
 - `src/Application/Chat/DeepSeekChatProvider.ts` — imported `THINKING_LABEL`/`THINKING_SEPARATOR` and replaced the text-reporting block with the streaming logic that tracks `thinkingShown`/`answerStarted`, reports the label once, streams reasoning chunks, and reports the separator once before the first answer chunk. Tool-call and usage reporting are unchanged.
+
+#### Follow-up fix — reasoning must be replayed
+
+DeepSeek's thinking mode rejects a request that carries `tools` when a replayed
+assistant message has dropped its `reasoning_content`
+(`The reasoning_content in the thinking mode must be passed back to the API`,
+HTTP 400), which broke every turn that followed a sub-agent tool call.
+`stripThinking` was replaced by `splitThinking`, the reasoning is now kept on
+`ChatMessage.reasoningContent`, and it is written back to the wire:
+
+- `src/Core/Chat/ChatMessage.ts` — added the optional `reasoningContent` field.
+- `src/Infrastructure/Chat/DeepSeekHttpClient.ts` — added `reasoning_content?: string | null` to `WireMessage` and emit it from the assistant branch of `toWireMessage`.
 
 ### Verification
 - `npm run compile` (tsc -p ./) completed with exit code 0 and no TypeScript errors.
+- A stubbed-`vscode` harness exercised the compiled `MessageConverter` and
+  `DeepSeekHttpClient`: reasoning is captured from echoed assistant messages
+  (with and without an answer), stripped from `content`, kept alongside tool calls,
+  omitted when absent, and emitted as `reasoning_content` next to `tool_calls` on
+  the wire. All checks passed.
 
 ### Deviations
 - None.

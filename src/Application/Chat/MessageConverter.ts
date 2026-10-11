@@ -79,23 +79,38 @@ function convertAssistantMessage(
 		}
 	}
 
-	text = stripThinking(text);
+	const { content, reasoning } = splitThinking(text);
 
 	return {
 		role: 'assistant',
-		content: text.length > 0 ? text : null,
+		content: content.length > 0 ? content : null,
+		// DeepSeek's thinking mode rejects a tools request when a replayed
+		// assistant message drops its `reasoning_content`, so the fenced block is
+		// carried back verbatim instead of being discarded.
+		...(reasoning !== null ? { reasoningContent: reasoning } : {}),
 		...(toolCalls.length > 0 ? { toolCalls } : {}),
 	};
 }
 
-function stripThinking(text: string): string {
+/**
+ * Splits the fenced thinking block out of an echoed assistant message. Returns
+ * `null` reasoning when no thinking block is present so callers can omit the
+ * field rather than send an empty string.
+ */
+function splitThinking(text: string): { content: string; reasoning: string | null } {
 	const start = text.indexOf(THINKING_LABEL);
 	if (start < 0) {
-		return text;
+		return { content: text, reasoning: null };
 	}
 	const after = start + THINKING_LABEL.length;
 	const sep = text.indexOf(THINKING_SEPARATOR, after);
-	return sep >= 0 ? text.slice(sep + THINKING_SEPARATOR.length) : '';
+	if (sep < 0) {
+		return { content: '', reasoning: text.slice(after) };
+	}
+	return {
+		content: text.slice(sep + THINKING_SEPARATOR.length),
+		reasoning: text.slice(after, sep),
+	};
 }
 
 function convertUserMessage(
