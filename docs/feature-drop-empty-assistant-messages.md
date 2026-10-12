@@ -34,7 +34,7 @@ As a user of the DeepSeek provider, I want empty assistant messages without text
 - [x] **Task 1 — Omit empty assistant turns in API-history conversion (S)** — Depends on: none. Update `convertAssistantMessage` in `MessageConverter.ts` to represent an omitted assistant result when converted content is empty and no tool calls were collected; have `toChatMessages` skip that result. Determine emptiness after `splitThinking` so native and fenced reasoning-only parts are covered. Preserve all messages with non-empty content or tool calls and leave other roles unchanged.
 - [x] **Task 2 — Add focused conversion regression tests (M)** — Depends on: Task 1. Add tests for native reasoning-only, fenced reasoning-only, and otherwise empty assistant messages being omitted, plus text-only, tool-call-only, and mixed text/tool-call assistant messages being preserved. Use the smallest test setup compatible with the repository; the current package scripts expose compile/watch/package only, with no test runner configured.
 - [x] **Task 3 — Verify serialized continuation history (M)** — Depends on: Tasks 1–2. Add or extend a boundary-level regression that builds a request containing an empty/reasoning-only replayed assistant turn, passes it through the existing request serialization path, and asserts that no invalid assistant object is sent while valid assistant text and tool calls remain. Include a request carrying tools to exercise the existing `reasoning_content` handling.
-- [ ] **Task 4 — Run project validation (S)** — Depends on: Tasks 1–3. Run the focused tests and `npm run compile`; confirm no changes are needed to the core message model or HTTP wire schema.
+- [x] **Task 4 — Run project validation (S)** — Depends on: Tasks 1–3. Run the focused tests and `npm run compile`; confirm no changes are needed to the core message model or HTTP wire schema.
 
 ### Suggested Implementation Order
 Implement omission in `MessageConverter` first because it is the single conversion boundary used by provider requests. Add focused unit coverage, then a serialized-request regression for the sub-agent continuation case, and finally run tests and TypeScript compilation. Resolve the test-runner question before adding test dependencies.
@@ -52,3 +52,8 @@ Implement omission in `MessageConverter` first because it is the single conversi
 ### Task 3
 - Extended the existing `node:test` setup with a serialized-request regression using `DeepSeekHttpClient.streamChat` and a mocked fetch boundary.
 - Verified reasoning-only replay is absent from the serialized request while text and tool-call assistant messages remain valid; a tools-carrying request also confirms the serialized assistant messages include `reasoning_content`.
+
+### Task 4
+- Ran `npm test`; all seven focused regression tests passed, including the serialized-request test.
+- Ran `npm run compile`; TypeScript compilation succeeded.
+- Confirmed no changes to the core message model or HTTP wire schema were needed.
