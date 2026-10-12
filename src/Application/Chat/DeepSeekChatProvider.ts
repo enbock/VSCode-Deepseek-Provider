@@ -9,13 +9,9 @@ import { ModelInfo } from '../../Core/Chat/ModelInfo';
 import { ChatRequest, ToolChoiceMode, ToolDefinition } from '../../Core/Chat/ChatRequest';
 import { TokenUsage } from '../../Core/Chat/ChatStreamChunk';
 import { ChatProviderError } from './ChatProviderError';
-import {
-	parseToolInput,
-	stringifyToolInput,
-	THINKING_LABEL,
-	THINKING_SEPARATOR,
-	toChatMessages,
-} from './MessageConverter';
+import { parseToolInput, stringifyToolInput, toChatMessages } from './MessageConverter';
+import { readThinkingPart } from './ThinkingPart';
+import { ThinkingReporterFactory } from './ThinkingReporter/ThinkingReporterFactory';
 
 /**
  * MIME type of the data part the chat view reads to fill its context-usage
@@ -43,6 +39,7 @@ export class DeepSeekChatProvider
 		private readonly configuration: Configuration,
 		private readonly modelCatalog: ModelCatalog,
 		private readonly tokenEstimator: TokenEstimator,
+		private readonly thinkingReporterFactory: ThinkingReporterFactory,
 		private readonly logger: Logger,
 	) {}
 
@@ -121,25 +118,21 @@ export class DeepSeekChatProvider
 		const cancellationListener = token.onCancellationRequested(() => abortController.abort());
 
 		try {
-			let thinkingShown = false;
-			let answerStarted = false;
+			// The chain of thought has to be closed before anything else is streamed -
+			// otherwise the answer text of a merged assistant turn is replayed as part
+			// of the reasoning.
+			const thinkingReporter = this.thinkingReporterFactory.create(progress);
 
 			for await (const chunk of this.chatClient.streamChat(request, abortController.signal)) {
 				if (chunk.reasoning) {
-					if (!thinkingShown) {
-						thinkingShown = true;
-						progress.report(new vscode.LanguageModelTextPart(THINKING_LABEL));
-					}
-					progress.report(new vscode.LanguageModelTextPart(chunk.reasoning));
+					thinkingReporter.reportReasoning(chunk.reasoning);
 				}
 				if (chunk.text) {
-					if (thinkingShown && !answerStarted) {
-						progress.report(new vscode.LanguageModelTextPart(THINKING_SEPARATOR));
-					}
-					answerStarted = true;
+					thinkingReporter.closeReasoning();
 					progress.report(new vscode.LanguageModelTextPart(chunk.text));
 				}
 				for (const call of chunk.toolCalls ?? []) {
+					thinkingReporter.closeReasoning();
 					progress.report(
 						new vscode.LanguageModelToolCallPart(call.id, call.name, parseToolInput(call.arguments)),
 					);
@@ -185,6 +178,13 @@ export class DeepSeekChatProvider
 	}
 
 	private countPartTokens(rawPart: unknown): number {
+		// Replayed reasoning is part of the prompt when tools are in play, so it
+		// has to be counted or VS Code under-estimates the context window.
+		const thinking = readThinkingPart(rawPart);
+		if (thinking !== null) {
+			return this.tokenEstimator.estimate(thinking);
+		}
+
 		if (rawPart instanceof vscode.LanguageModelTextPart) {
 			return this.tokenEstimator.estimate(rawPart.value);
 		}

@@ -141,10 +141,22 @@ export class DeepSeekHttpClient implements ChatClient, ModelClient {
 	}
 
 	private toWireRequest(request: ChatRequest): object {
+		const carriesTools = (request.tools?.length ?? 0) > 0;
+		const messages = request.messages.map((message) => this.toWireMessage(message, carriesTools));
+		const withoutReasoning = messages.filter(
+			(message) => message.role === 'assistant' && message.reasoning_content === '',
+		).length;
+
+		if (withoutReasoning > 0) {
+			this.logger.debug(
+				`Replayed ${withoutReasoning} assistant turn(s) without reasoning; sending an empty reasoning_content because the request carries tools.`,
+			);
+		}
+
 		const body: Record<string, unknown> = {
 			model: request.model,
 			stream: true,
-			messages: request.messages.map((message) => this.toWireMessage(message)),
+			messages,
 		};
 
 		if (request.temperature !== undefined) {
@@ -175,24 +187,29 @@ export class DeepSeekHttpClient implements ChatClient, ModelClient {
 		return body;
 	}
 
-	private toWireMessage(message: ChatMessage): WireMessage {
+	/**
+	 * `carriesTools` mirrors DeepSeek's rule for thinking mode: as soon as the
+	 * request contains `tools`, every replayed assistant turn has to carry a
+	 * `reasoning_content` field - even turns the model answered without calling a
+	 * tool - or the whole request is rejected with a 400. Not every turn still
+	 * has its chain of thought by then (compaction, turns produced by another
+	 * model), so the field is sent as an empty string as a last resort.
+	 */
+	private toWireMessage(message: ChatMessage, carriesTools: boolean): WireMessage {
 		switch (message.role) {
-			case 'assistant':
+			case 'assistant': {
+				const reasoningContent = message.reasoningContent ?? '';
 				return {
 					role: 'assistant',
 					content: message.content,
-					// DeepSeek's thinking mode requires the chain of thought to be
-					// replayed on assistant turns whenever the request carries
-					// tools, otherwise the API rejects the request with a 400.
-					...(message.reasoningContent
-						? { reasoning_content: message.reasoningContent }
-						: {}),
+					...(carriesTools || reasoningContent.length > 0 ? { reasoning_content: reasoningContent } : {}),
 					...(message.toolCalls && message.toolCalls.length > 0
 						? {
 								tool_calls: message.toolCalls.map((call) => this.toWireToolCall(call)),
 							}
 						: {}),
 				};
+			}
 			case 'tool':
 				return {
 					role: 'tool',

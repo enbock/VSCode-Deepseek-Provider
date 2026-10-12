@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ChatMessage, ToolCall } from '../../Core/Chat/ChatMessage';
+import { readThinkingPart } from './ThinkingPart';
 
 export const THINKING_LABEL = '**Thinking**\n\n';
 export const THINKING_SEPARATOR = '\n\n---\n\n';
@@ -60,9 +61,16 @@ function convertAssistantMessage(
 	seenToolCallIds: Set<string>,
 ): ChatMessage {
 	let text = '';
+	let replayedReasoning = '';
 	const toolCalls: ToolCall[] = [];
 
 	for (const rawPart of message.content) {
+		const thinking = readThinkingPart(rawPart);
+		if (thinking !== null) {
+			replayedReasoning += thinking;
+			continue;
+		}
+
 		const part = rawPart as ChatPart;
 		if (part instanceof vscode.LanguageModelTextPart) {
 			text += part.value;
@@ -80,14 +88,21 @@ function convertAssistantMessage(
 	}
 
 	const { content, reasoning } = splitThinking(text);
+	// Reasoning arrives by one of two routes: natively as a thinking part when
+	// the agent host replays it, or inside the fenced block the provider streamed
+	// for the chat view. DeepSeek concatenates whatever is passed back into the
+	// context, so both sources are kept.
+	const reasoningContent = [replayedReasoning, reasoning]
+		.filter((value): value is string => value !== null && value.length > 0)
+		.join('\n\n');
 
 	return {
 		role: 'assistant',
 		content: content.length > 0 ? content : null,
-		// DeepSeek's thinking mode rejects a tools request when a replayed
-		// assistant message drops its `reasoning_content`, so the fenced block is
-		// carried back verbatim instead of being discarded.
-		...(reasoning !== null ? { reasoningContent: reasoning } : {}),
+		// DeepSeek's thinking mode rejects a request carrying `tools` when a
+		// replayed assistant turn drops its `reasoning_content`, so the chain of
+		// thought is carried back instead of being discarded.
+		...(reasoningContent.length > 0 ? { reasoningContent } : {}),
 		...(toolCalls.length > 0 ? { toolCalls } : {}),
 	};
 }

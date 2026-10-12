@@ -5,6 +5,7 @@ import { OutputChannelLogger } from '../../Infrastructure/Logging/OutputChannelL
 import { ModelCatalog } from '../../Core/Chat/ModelCatalog';
 import { TokenEstimator } from '../../Core/Chat/TokenEstimator';
 import { DeepSeekChatProvider } from '../Chat/DeepSeekChatProvider';
+import { ThinkingReporterFactory } from '../Chat/ThinkingReporter/ThinkingReporterFactory';
 import { DeepSeekCompletionProvider } from '../Completion/DeepSeekCompletionProvider';
 import { GenerateCommitMessageCommand } from '../CommitMessage/GenerateCommitMessageCommand';
 import { CheckSetupCommand } from '../Diagnostics/CheckSetupCommand';
@@ -25,6 +26,7 @@ export function createContainer(context: vscode.ExtensionContext): Container {
 	const chatClient = new DeepSeekHttpClient(configuration, logger);
 	const modelCatalog = new ModelCatalog();
 	const tokenEstimator = new TokenEstimator();
+	const thinkingReporterFactory = new ThinkingReporterFactory(logger);
 
 	const provider = new DeepSeekChatProvider(
 		chatClient,
@@ -32,6 +34,7 @@ export function createContainer(context: vscode.ExtensionContext): Container {
 		configuration,
 		modelCatalog,
 		tokenEstimator,
+		thinkingReporterFactory,
 		logger,
 	);
 	const completionProvider = new DeepSeekCompletionProvider(chatClient, configuration, logger);
