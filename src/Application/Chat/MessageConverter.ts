@@ -47,7 +47,10 @@ export function toChatMessages(
 
 	for (const message of messages) {
 		if (message.role === vscode.LanguageModelChatMessageRole.Assistant) {
-			result.push(convertAssistantMessage(message, seenToolCallIds));
+			const converted = convertAssistantMessage(message, seenToolCallIds);
+			if (converted) {
+				result.push(converted);
+			}
 		} else {
 			convertUserMessage(message, result, seenToolResultIds);
 		}
@@ -59,7 +62,7 @@ export function toChatMessages(
 function convertAssistantMessage(
 	message: vscode.LanguageModelChatRequestMessage,
 	seenToolCallIds: Set<string>,
-): ChatMessage {
+): ChatMessage | undefined {
 	let text = '';
 	let replayedReasoning = '';
 	const toolCalls: ToolCall[] = [];
@@ -88,6 +91,10 @@ function convertAssistantMessage(
 	}
 
 	const { content, reasoning } = splitThinking(text);
+	if (content.length === 0 && toolCalls.length === 0) {
+		return undefined;
+	}
+
 	// Reasoning arrives by one of two routes: natively as a thinking part when
 	// the agent host replays it, or inside the fenced block the provider streamed
 	// for the chat view. DeepSeek concatenates whatever is passed back into the
