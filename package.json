@@ -114,6 +114,7 @@
     "scripts": {
       "compile": "tsc -p ./",
       "watch": "tsc -watch -p ./",
+      "test": "npm run compile && node --test",
       "package": "vsce package"
   },
   "devDependencies": {

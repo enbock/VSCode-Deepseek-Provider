@@ -32,7 +32,7 @@ As a user of the DeepSeek provider, I want empty assistant messages without text
 
 ### Task Breakdown
 - [x] **Task 1 — Omit empty assistant turns in API-history conversion (S)** — Depends on: none. Update `convertAssistantMessage` in `MessageConverter.ts` to represent an omitted assistant result when converted content is empty and no tool calls were collected; have `toChatMessages` skip that result. Determine emptiness after `splitThinking` so native and fenced reasoning-only parts are covered. Preserve all messages with non-empty content or tool calls and leave other roles unchanged.
-- [ ] **Task 2 — Add focused conversion regression tests (M)** — Depends on: Task 1. Add tests for native reasoning-only, fenced reasoning-only, and otherwise empty assistant messages being omitted, plus text-only, tool-call-only, and mixed text/tool-call assistant messages being preserved. Use the smallest test setup compatible with the repository; the current package scripts expose compile/watch/package only, with no test runner configured.
+- [x] **Task 2 — Add focused conversion regression tests (M)** — Depends on: Task 1. Add tests for native reasoning-only, fenced reasoning-only, and otherwise empty assistant messages being omitted, plus text-only, tool-call-only, and mixed text/tool-call assistant messages being preserved. Use the smallest test setup compatible with the repository; the current package scripts expose compile/watch/package only, with no test runner configured.
 - [ ] **Task 3 — Verify serialized continuation history (M)** — Depends on: Tasks 1–2. Add or extend a boundary-level regression that builds a request containing an empty/reasoning-only replayed assistant turn, passes it through the existing request serialization path, and asserts that no invalid assistant object is sent while valid assistant text and tool calls remain. Include a request carrying tools to exercise the existing `reasoning_content` handling.
 - [ ] **Task 4 — Run project validation (S)** — Depends on: Tasks 1–3. Run the focused tests and `npm run compile`; confirm no changes are needed to the core message model or HTTP wire schema.
 
@@ -44,3 +44,7 @@ Implement omission in `MessageConverter` first because it is the single conversi
 ### Task 1
 - `convertAssistantMessage` now returns no result when `splitThinking` leaves empty content and no tool calls were collected; `toChatMessages` skips that result.
 - Assistant content is checked by length without trimming, and user/system/tool-result conversion is unchanged.
+
+### Task 2
+- Added six focused `node:test` regression cases for omitted reasoning-only/empty turns and preserved text/tool-call combinations.
+- Added an npm test script that compiles TypeScript before running tests. The tests mock only the VS Code language-model part classes needed to exercise `MessageConverter`.
