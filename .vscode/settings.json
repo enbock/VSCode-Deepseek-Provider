@@ -7,6 +7,12 @@
       "icon": "tools"
     },
     {
+      "name": "Tests",
+      "command": "npm test",
+      "cwd": "${workspaceFolder}",
+      "icon": "beaker"
+    },
+    {
       "name": "Package",
       "command": "npm run package",
       "cwd": "${workspaceFolder}",
